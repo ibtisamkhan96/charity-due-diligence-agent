@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: charity-agent-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.api
+    plan: starter
+    envVars:
+      # No LLM key here: it's bring-your-own, sent by each caller in the
+      # /query request body, never a server-side secret.
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: API_AUTH_TOKEN
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"
+
+  - type: web
+    name: charity-agent-ui
+    runtime: docker
+    dockerfilePath: ./Dockerfile.ui
+    plan: starter
+    envVars:
+      # Set manually after the API service's URL is known.
+      - key: API_BASE_URL
+        sync: false

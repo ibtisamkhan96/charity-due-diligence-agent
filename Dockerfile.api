@@ -1,0 +1,17 @@
+# FastAPI backend. Listens on $PORT, not a hardcoded port: Render, Railway, and
+# most platforms assign this dynamically and route external traffic to whatever
+# value they hand the container, a fixed port here would silently break on
+# whichever platform doesn't happen to assign that exact number.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY agent/ agent/
+COPY api/ api/
+COPY observability/ observability/
+
+EXPOSE 8000
+CMD uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}
