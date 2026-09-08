@@ -26,17 +26,22 @@ with st.sidebar:
     )
     provider_label = st.radio(
         "Provider",
-        ["Anthropic (Claude) — recommended", "OpenAI"],
+        ["Anthropic (Claude), recommended", "OpenAI", "Groq"],
         help="Recommended: Anthropic, this agent was built and tested against Claude Sonnet.",
     )
-    provider = "anthropic" if provider_label.startswith("Anthropic") else "openai"
-    key_help_url = (
-        "https://console.anthropic.com/settings/keys"
-        if provider == "anthropic"
-        else "https://platform.openai.com/api-keys"
-    )
+    provider = {
+        "Anthropic (Claude), recommended": "anthropic",
+        "OpenAI": "openai",
+        "Groq": "groq",
+    }[provider_label]
+    key_help_url = {
+        "anthropic": "https://console.anthropic.com/settings/keys",
+        "openai": "https://platform.openai.com/api-keys",
+        "groq": "https://console.groq.com/keys",
+    }[provider]
+    provider_display = {"anthropic": "Anthropic", "openai": "OpenAI", "groq": "Groq"}[provider]
     user_api_key = st.text_input(
-        f"{'Anthropic' if provider == 'anthropic' else 'OpenAI'} API key",
+        f"{provider_display} API key",
         type="password",
         placeholder="sk-...",
     )
@@ -128,4 +133,4 @@ if submitted and query.strip():
         elif not news:
             st.markdown("_no recent articles found_")
         for n in news:
-            st.markdown(f"- [{n['title']}]({n['url']}) — {n['domain']} ({n['seen_date']})")
+            st.markdown(f"- [{n['title']}]({n['url']}), {n['domain']} ({n['seen_date']})")

@@ -179,7 +179,7 @@ uvicorn api.main:app --reload
 streamlit run ui/app.py
 ```
 
-The Streamlit UI asks each visitor for their own Anthropic or OpenAI key in its
+The Streamlit UI asks each visitor for their own Anthropic, OpenAI, or Groq key in its
 sidebar. ProPublica and GDELT need no key at all.
 
 ### Run with Docker

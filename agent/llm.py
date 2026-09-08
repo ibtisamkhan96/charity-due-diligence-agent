@@ -30,4 +30,16 @@ def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=No
             api_key=api_key,
         )
 
-    raise ValueError(f"unknown provider: {provider!r}, expected 'anthropic' or 'openai'")
+    if provider == "groq":
+        from langchain_groq import ChatGroq
+        # openai/gpt-oss-20b is Groq's own current recommended default as of
+        # mid-2026, after they deprecated the older llama-3.1/3.3 aliases this
+        # project might otherwise have defaulted to (confirmed against Groq's
+        # own deprecation notice, not assumed from an older model list).
+        return ChatGroq(
+            model=model or "openai/gpt-oss-20b",
+            temperature=temperature,
+            api_key=api_key,
+        )
+
+    raise ValueError(f"unknown provider: {provider!r}, expected 'anthropic', 'openai', or 'groq'")

@@ -34,9 +34,10 @@ def main():
     configure_langsmith()
 
     provider = os.environ.get("LLM_PROVIDER", "anthropic")
-    api_key = os.environ.get("ANTHROPIC_API_KEY") if provider == "anthropic" else os.environ.get("OPENAI_API_KEY")
+    key_env_var = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY", "groq": "GROQ_API_KEY"}[provider]
+    api_key = os.environ.get(key_env_var)
     if not api_key:
-        raise SystemExit(f"Set {'ANTHROPIC_API_KEY' if provider == 'anthropic' else 'OPENAI_API_KEY'} first.")
+        raise SystemExit(f"Set {key_env_var} first.")
 
     llm = get_chat_model(provider=provider, api_key=api_key)
     app = build_graph(llm, search_charity, get_organization, search_news)
