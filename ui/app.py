@@ -9,7 +9,26 @@ import streamlit as st
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 
-st.set_page_config(page_title="Charity Due Diligence Agent", layout="wide")
+st.set_page_config(page_title="Charity Due Diligence Agent", page_icon="✓", layout="wide")
+
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+    html, body, [class*="css"] { font-family: 'Source Sans 3', sans-serif; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Lexend', sans-serif !important; }
+
+    /* the submit action is the one thing on this page that should pull the eye */
+    div[data-testid="stFormSubmitButton"] button {
+        background-color: #F97316; color: #FFFFFF; border: none; font-weight: 600;
+    }
+    div[data-testid="stFormSubmitButton"] button:hover { background-color: #EA6A0C; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("Charity Due Diligence Agent")
 st.caption(
     "An agent that checks a charity's real IRS filings and recent news before you "
@@ -55,6 +74,42 @@ with st.form("query_form"):
     )
     submitted = st.form_submit_button("Check this charity")
 
+def _how_it_works() -> None:
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.subheader("Real filings")
+        st.markdown("Pulled live from ProPublica's Nonprofit Explorer, the same IRS Form 990 data anyone can look up, not summarised from memory.")
+    with c2:
+        st.subheader("Real news check")
+        st.markdown("Searches for recent coverage before giving a verdict, and says plainly if that check couldn't be completed rather than implying a clean record.")
+    with c3:
+        st.subheader("Honest verdict")
+        st.markdown("Ends with recommended, recommended with caveats, or cannot confirm, never a confident answer the evidence doesn't support.")
+
+
+if not submitted:
+    _how_it_works()
+
+
+def _friendly_error(raw_error: str) -> str:
+    """Translate a raw exception string into something a donor, not a developer,
+    can act on. The technical original is never hidden, just not led with."""
+    lowered = raw_error.lower()
+    if "unexpected keyword argument" in lowered or "strict" in lowered:
+        return (
+            "The selected model provider rejected part of the request format this agent "
+            "uses internally. This is a known provider/model compatibility issue, not a "
+            "problem with your question. Try a different provider, or try again shortly."
+        )
+    if "api key" in lowered or "auth" in lowered or "401" in raw_error or "invalid_api_key" in lowered:
+        return "That API key was rejected by the provider. Double-check it's correct, active, and for the selected provider."
+    if "rate" in lowered and "limit" in lowered:
+        return "The model provider's rate limit was hit. Wait a moment and try again."
+    if "timeout" in lowered or "timed out" in lowered:
+        return "The model provider took too long to respond. Try again."
+    return "Something went wrong while running this check. See the technical details below."
+
 
 def _poll_job(job_id, log_placeholder, timeout_s=120):
     seen_log_lines = 0
@@ -77,6 +132,7 @@ def _poll_job(job_id, log_placeholder, timeout_s=120):
 
 if submitted and not user_api_key.strip():
     st.warning("Add your API key in the sidebar first, this demo doesn't run on a shared one.")
+    _how_it_works()
     st.stop()
 
 if submitted and query.strip():
@@ -102,7 +158,10 @@ if submitted and query.strip():
         st.stop()
 
     if status["status"] == "failed":
-        st.error(f"Agent run failed: {status.get('error')}")
+        raw_error = status.get("error", "unknown error")
+        st.error(_friendly_error(raw_error))
+        with st.expander("Technical details"):
+            st.code(raw_error, language=None)
         st.stop()
 
     result = status["result"]
