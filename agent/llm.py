@@ -7,7 +7,19 @@ process-wide global (an env var, or a cached model instance) risks reusing it
 for someone else's query. Every node takes its llm as a parameter rather than
 importing this module directly, so tests can substitute a stub chat model with
 no network or key involved at all.
+
+The Groq *model choice* is a process-wide env var (GROQ_MODEL), unlike the key.
+Groq deprecates specific model IDs on a real schedule (22 entries in their own
+deprecation log at the time of writing), and this default has already gone
+stale twice from under this code within one deploy cycle: openai/gpt-oss-20b
+first (works, but hallucinates tool names under with_structured_output, a
+documented issue, not fixable here), then llama-3.3-70b-versatile, which
+looked current in Groq's own docs but was actually deprecated 2026-08-16 (a
+live 404 model_not_found from a real key is what caught it, not the docs). An
+env var lets the next deprecation be a Railway variable change, not another
+code-diagnose-redeploy cycle.
 """
+import os
 
 
 def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=None):
@@ -32,19 +44,20 @@ def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=No
 
     if provider == "groq":
         from langchain_groq import ChatGroq
-        # NOT openai/gpt-oss-20b: this project's only real Groq usage is
-        # with_structured_output() (intake, critic), and gpt-oss-20b/120b are
-        # documented as unreliable there, both in a filed LangChain issue
-        # (langchain-ai/langchain#34155) and on Groq's own community forum,
-        # hallucinating a slightly wrong tool name and getting the whole
-        # request rejected server-side (tool_use_failed). llama-3.3-70b-versatile
-        # is the model that same issue confirmed works correctly with both
-        # tool-calling strategies, and is still a current, active production
-        # model on Groq as of this writing, not the deprecated alias
-        # (llama3-70b-8192, no "3.3"/"-versatile") an earlier version of this
-        # comment mistook it for.
+        # qwen/qwen3.6-27b: Groq's own deprecation table names this (or
+        # openai/gpt-oss-120b) as the direct replacement for the now-dead
+        # llama-3.3-70b-versatile. Not gpt-oss-120b, despite that also being
+        # a listed option, because it is the same family as gpt-oss-20b,
+        # which is independently documented (langchain-ai/langchain#34155,
+        # Groq's own community forum) as unreliable specifically at the
+        # with_structured_output() calls this agent depends on. qwen3.6-27b
+        # is outside that family and Groq's tool-use docs list it with real
+        # structured-output support (json_schema format, constrained
+        # decoding). GROQ_MODEL overrides this without a code change, see
+        # the module docstring for why that override exists.
+        default_model = os.environ.get("GROQ_MODEL", "qwen/qwen3.6-27b")
         return ChatGroq(
-            model=model or "llama-3.3-70b-versatile",
+            model=model or default_model,
             temperature=temperature,
             api_key=api_key,
         )
