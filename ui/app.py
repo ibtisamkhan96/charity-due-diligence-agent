@@ -59,10 +59,14 @@ with st.sidebar:
         "groq": "https://console.groq.com/keys",
     }[provider]
     provider_display = {"anthropic": "Anthropic", "openai": "OpenAI", "groq": "Groq"}[provider]
+    # Each provider's keys look different (Groq's don't start with sk- at all), a
+    # generic "sk-..." placeholder for every provider makes a correctly-pasted
+    # Groq key look wrong and a wrong one look plausible.
+    key_placeholder = {"anthropic": "sk-ant-...", "openai": "sk-...", "groq": "gsk_..."}[provider]
     user_api_key = st.text_input(
         f"{provider_display} API key",
         type="password",
-        placeholder="sk-...",
+        placeholder=key_placeholder,
     )
     st.caption(f"[Get a key]({key_help_url})")
 
