@@ -56,10 +56,29 @@ def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=No
         # decoding). GROQ_MODEL overrides this without a code change, see
         # the module docstring for why that override exists.
         default_model = os.environ.get("GROQ_MODEL", "qwen/qwen3.6-27b")
+        actual_model = model or default_model
+
+        extra_kwargs = {}
+        if "qwen" in actual_model.lower():
+            # qwen3.6-27b defaults to "thinking" mode, which spends hidden
+            # reasoning tokens on every call, including for a short structured
+            # extraction or a short donor report, neither of which needs "complex
+            # reasoning, math, or coding" (Groq's own description of when
+            # thinking mode is for). That bloat is what a real 429 caught:
+            # requested 1780 output tokens against the free tier's 1000/minute
+            # cap. reasoning_effort is a real ChatGroq constructor field in the
+            # installed langchain-groq version (verified directly, not passed
+            # via model_kwargs, which this version's own pydantic validation
+            # rejects for any parameter it recognises explicitly). Scoped to
+            # qwen models specifically, since a different model reached via
+            # GROQ_MODEL might not support it the same way.
+            extra_kwargs["reasoning_effort"] = "none"
+
         return ChatGroq(
-            model=model or default_model,
+            model=actual_model,
             temperature=temperature,
             api_key=api_key,
+            **extra_kwargs,
         )
 
     raise ValueError(f"unknown provider: {provider!r}, expected 'anthropic', 'openai', or 'groq'")
