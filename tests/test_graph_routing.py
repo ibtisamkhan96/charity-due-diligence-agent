@@ -65,7 +65,7 @@ def test_skip_to_critic_when_no_organization_matched():
 
     llm = FakeChatModel(
         constraints_output=ConstraintsOutput(charity_name="Some Unknown Org"),
-        critic_output=CriticVerdict(sufficient=True, reason="nothing to find, stop here"),
+        critic_output=CriticVerdict(sufficient="true", reason="nothing to find, stop here"),
     )
 
     app = build_graph(llm, fake_search_charity, fake_get_organization, fake_search_news)
@@ -103,7 +103,7 @@ def test_retry_loop_excludes_wrong_match_and_respects_max_iterations():
 
         def invoke(self, messages):
             self.n += 1
-            return CriticVerdict(sufficient=False, reason="looks like the wrong chapter")
+            return CriticVerdict(sufficient="false", reason="looks like the wrong chapter")
 
     class AlwaysInsufficientChatModel(FakeChatModel):
         def with_structured_output(self, model_cls):

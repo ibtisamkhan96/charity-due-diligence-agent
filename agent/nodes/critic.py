@@ -29,7 +29,14 @@ _SYSTEM_PROMPT = (
 
 
 class CriticVerdict(BaseModel):
-    sufficient: bool
+    # A string, not bool: a real Groq run (qwen3.6-27b) generated the tool call
+    # with sufficient set to the literal text "True" (Python-style, not JSON
+    # true), and Groq's own server-side schema validation rejected the whole
+    # request outright for not matching the declared `boolean` type, a 400
+    # before this code ever saw a response to coerce. A string field accepts
+    # whatever casing a model produces; critic() below is what interprets it,
+    # so nothing downstream of this node needs to know the wire type changed.
+    sufficient: str = Field(description='Exactly the string "true" or "false".')
     reason: str = Field(description="one or two sentences explaining the call")
 
 
@@ -59,10 +66,11 @@ def make_critic_node(llm):
             ("system", _SYSTEM_PROMPT),
             ("human", f"Original request: {state['raw_query']}\n\n{summary}"),
         ])
-        verdict = result.model_dump()
+        sufficient = result.sufficient.strip().lower() in ("true", "yes", "1")
+        verdict = {"sufficient": sufficient, "reason": result.reason}
         return {
             "critic_verdict": verdict,
-            "log": [f"critic: {'sufficient' if verdict['sufficient'] else 'insufficient'}, {verdict['reason']}"],
+            "log": [f"critic: {'sufficient' if sufficient else 'insufficient'}, {verdict['reason']}"],
         }
 
     return critic
