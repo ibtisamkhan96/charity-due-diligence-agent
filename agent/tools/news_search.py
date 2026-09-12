@@ -16,6 +16,14 @@ this process made, though, not the server's actual cooldown window, so a
 429 still surfaced in real testing shortly after unrelated manual requests
 from the same machine. retry_with_backoff (the same pattern already proven
 against arXiv's rate limit) covers that gap.
+
+A real 429 in production traced to something spacing alone doesn't fix:
+requests carrying no User-Agent header (python-requests' own default is a
+well-known bot signature) get rate-limited by GDELT independent of actual
+request pace, reported independently against this same API
+(github.com/alex9smith/gdelt-doc-api#22, fixed there by adding one, not by
+slowing down). Every request here now identifies itself honestly instead
+of leaving requests to send its default.
 """
 import time
 from dataclasses import dataclass
@@ -24,6 +32,7 @@ from functools import wraps
 import requests
 
 _DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
+_USER_AGENT = "charity-due-diligence-agent/1.0 (+https://github.com/ibtisamkhan96/charity-due-diligence-agent)"
 _MIN_INTERVAL_S = 6.0
 _last_call_at = 0.0
 
@@ -62,7 +71,7 @@ def _throttle():
     _last_call_at = time.time()
 
 
-@retry_with_backoff(max_attempts=3, base_delay=6.0)
+@retry_with_backoff(max_attempts=4, base_delay=6.0)
 def _run_query(query, max_results):
     _throttle()
     response = requests.get(
@@ -74,6 +83,7 @@ def _run_query(query, max_results):
             "format": "json",
             "sort": "datedesc",
         },
+        headers={"User-Agent": _USER_AGENT},
         timeout=20,
     )
     response.raise_for_status()
