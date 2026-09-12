@@ -32,12 +32,19 @@ def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=No
 
     if provider == "groq":
         from langchain_groq import ChatGroq
-        # openai/gpt-oss-20b is Groq's own current recommended default as of
-        # mid-2026, after they deprecated the older llama-3.1/3.3 aliases this
-        # project might otherwise have defaulted to (confirmed against Groq's
-        # own deprecation notice, not assumed from an older model list).
+        # NOT openai/gpt-oss-20b: this project's only real Groq usage is
+        # with_structured_output() (intake, critic), and gpt-oss-20b/120b are
+        # documented as unreliable there, both in a filed LangChain issue
+        # (langchain-ai/langchain#34155) and on Groq's own community forum,
+        # hallucinating a slightly wrong tool name and getting the whole
+        # request rejected server-side (tool_use_failed). llama-3.3-70b-versatile
+        # is the model that same issue confirmed works correctly with both
+        # tool-calling strategies, and is still a current, active production
+        # model on Groq as of this writing, not the deprecated alias
+        # (llama3-70b-8192, no "3.3"/"-versatile") an earlier version of this
+        # comment mistook it for.
         return ChatGroq(
-            model=model or "openai/gpt-oss-20b",
+            model=model or "llama-3.3-70b-versatile",
             temperature=temperature,
             api_key=api_key,
         )

@@ -2,12 +2,14 @@ langgraph>=0.2.0
 langchain-anthropic>=0.2.0
 langchain-openai>=0.2.0
 # >=1.1.3: older langchain-groq passes strict=True to Groq's SDK for the
-# openai/gpt-oss-20b default model, which that SDK rejects outright
-# (TypeError: unexpected keyword argument 'strict'), breaking every
-# with_structured_output() call this agent makes (intake, critic). Fixed
-# upstream in langchain-ai/langchain#34167. A bare >=0.2.0 floor lets a
-# cached build (e.g. Railway reusing an old Docker layer for an unchanged
-# requirements.txt) keep resolving to a pre-fix version indefinitely.
+# openai/gpt-oss-20b model this agent used to default to (see agent/llm.py
+# for why it no longer does), which that SDK rejects outright (TypeError:
+# unexpected keyword argument 'strict'), breaking every with_structured_output()
+# call this agent makes (intake, critic). Fixed upstream in
+# langchain-ai/langchain#34167. A bare >=0.2.0 floor lets a cached build
+# (e.g. Railway reusing an old Docker layer for an unchanged requirements.txt)
+# keep resolving to a pre-fix version indefinitely, so this floor still
+# matters even after moving off that model.
 langchain-groq>=1.1.3
 pydantic>=2.8.2
 requests>=2.31.0
