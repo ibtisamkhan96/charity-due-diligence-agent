@@ -15,7 +15,7 @@ class FakeGraph:
 
 
 def _client_with_fake_graph():
-    main_module._build_graph = lambda provider, api_key: FakeGraph()
+    main_module._build_graph = lambda provider, api_key, workspace_id=None: FakeGraph()
     main_module._job_store = main_module.JobStore()
     return TestClient(main_module.app)
 

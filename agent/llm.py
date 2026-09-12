@@ -22,16 +22,27 @@ code-diagnose-redeploy cycle.
 import os
 
 
-def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=None):
+def get_chat_model(provider="anthropic", model=None, temperature=0.0, api_key=None, workspace_id=None):
     if not api_key:
         raise ValueError(f"an API key is required for provider={provider!r}")
 
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
+        # Real 400 from a live key: "This API key is not scoped to a workspace,
+        # so this request must include the anthropic-workspace-id header".
+        # Anthropic's newer identity-linked personal/service-account keys can
+        # reach more than one workspace, and a request from one of those must
+        # say which workspace to run in, there is no way to omit this for that
+        # key type. A single-workspace key never needs it, so this stays
+        # optional and does nothing for the common case.
+        extra_kwargs = {}
+        if workspace_id:
+            extra_kwargs["default_headers"] = {"anthropic-workspace-id": workspace_id}
         return ChatAnthropic(
             model=model or "claude-sonnet-4-5-20250929",
             temperature=temperature,
             api_key=api_key,
+            **extra_kwargs,
         )
 
     if provider == "openai":

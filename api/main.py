@@ -43,14 +43,14 @@ app.add_middleware(
 _job_store = JobStore()
 
 
-def _build_graph(provider, api_key):
+def _build_graph(provider, api_key, workspace_id=None):
     """Not cached: caching by (provider, key) would hold every visitor's key in
     server memory for the process lifetime, and caching without the key would
     reuse whichever caller's key built the graph first for every subsequent
     caller. Graph construction is cheap, in-memory node wiring, no network
     calls, so building it fresh per request costs nothing that matters next to
     the real API calls the agent itself makes."""
-    llm = get_chat_model(provider=provider, api_key=api_key)
+    llm = get_chat_model(provider=provider, api_key=api_key, workspace_id=workspace_id)
     return build_graph(llm, search_charity, get_organization, search_news)
 
 
@@ -70,7 +70,7 @@ def health():
 @app.post("/query", response_model=QueryResponse, dependencies=[Depends(_check_auth)])
 def submit_query(request: QueryRequest):
     try:
-        graph = _build_graph(request.provider, request.api_key)
+        graph = _build_graph(request.provider, request.api_key, request.workspace_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     job_id = _job_store.create()

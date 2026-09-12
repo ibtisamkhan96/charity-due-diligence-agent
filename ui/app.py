@@ -70,6 +70,23 @@ with st.sidebar:
     )
     st.caption(f"[Get a key]({key_help_url})")
 
+    workspace_id = None
+    if provider == "anthropic":
+        # Only some Anthropic keys need this: a personal or service-account key
+        # that can reach more than one workspace has to say which one on every
+        # request, or Anthropic's own API rejects it outright ("This API key is
+        # not scoped to a workspace..."). A single-workspace key never hits
+        # this, so this stays optional and out of the way until it's needed.
+        with st.expander("Workspace ID (only needed for some Anthropic keys)"):
+            st.caption(
+                "Leave blank unless you saw an error like \"This API key is not "
+                "scoped to a workspace\". That means your key can reach more than "
+                "one workspace and Anthropic needs to know which one to use, find "
+                "the ID (starts with wrkspc_) at "
+                "[console.anthropic.com/settings/workspaces](https://console.anthropic.com/settings/workspaces)."
+            )
+            workspace_id = st.text_input("Workspace ID", placeholder="wrkspc_...").strip() or None
+
 with st.form("query_form"):
     query = st.text_area(
         "Describe the charity you're checking",
@@ -105,6 +122,12 @@ def _friendly_error(raw_error: str) -> str:
             "The selected model provider rejected part of the request format this agent "
             "uses internally. This is a known provider/model compatibility issue, not a "
             "problem with your question. Try a different provider, or try again shortly."
+        )
+    if "workspace" in lowered:
+        return (
+            "Your Anthropic key can reach more than one workspace, so Anthropic needs "
+            "to know which one to use. Open \"Workspace ID\" in the sidebar and add it, "
+            "or use a key scoped to a single workspace instead."
         )
     if "api key" in lowered or "auth" in lowered or "401" in raw_error or "invalid_api_key" in lowered:
         return "That API key was rejected by the provider. Double-check it's correct, active, and for the selected provider."
@@ -143,7 +166,10 @@ if submitted and query.strip():
     with st.spinner("Submitting query..."):
         response = requests.post(
             f"{API_BASE_URL}/query",
-            json={"query": query, "provider": provider, "api_key": user_api_key.strip()},
+            json={
+                "query": query, "provider": provider, "api_key": user_api_key.strip(),
+                "workspace_id": workspace_id,
+            },
             timeout=30,
         )
         if response.status_code == 400:

@@ -10,6 +10,9 @@ class QueryRequest(BaseModel):
     # caller's credential with another. ProPublica and GDELT need no key at all.
     provider: str = "anthropic"
     api_key: str
+    # Only meaningful for provider="anthropic", and only for a minority of keys
+    # (multi-workspace personal/service-account keys). See agent/llm.py.
+    workspace_id: Optional[str] = None
 
 
 class QueryResponse(BaseModel):
